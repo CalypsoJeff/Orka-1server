@@ -133,6 +133,8 @@ const verifyOtpAndRegister = async (req, res) => {
     // Clean up Redis
     await redis.del(`otp:${phone}`);
     await redis.del(`tempUser:${phone}`);
+    console.log("heyylo");
+    
 
     res.status(201).json({
       message: "Registration successful! Redirecting to home page.",
