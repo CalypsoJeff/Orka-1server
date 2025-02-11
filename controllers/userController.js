@@ -15,6 +15,8 @@ const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 
 
+
+
 // Register User and Send OTP
 const registerUser = async (req, res) => {
   try {
@@ -59,14 +61,6 @@ const registerUser = async (req, res) => {
     return res.status(500).json({ error: "An error occurred during registration. Please try again later." }); // Ensure response is sent only once
   }
 };
-
-
-
-
-
-
-
-
 
 
 
@@ -133,8 +127,6 @@ const verifyOtpAndRegister = async (req, res) => {
     // Clean up Redis
     await redis.del(`otp:${phone}`);
     await redis.del(`tempUser:${phone}`);
-    console.log("heyylo");
-    
 
     res.status(201).json({
       message: "Registration successful! Redirecting to home page.",
@@ -147,6 +139,10 @@ const verifyOtpAndRegister = async (req, res) => {
     res.status(500).json({ error: "Failed to verify OTP. Please try again later." });
   }
 };
+
+
+
+
 
 
 

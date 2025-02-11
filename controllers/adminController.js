@@ -8,7 +8,8 @@ const Competition = require('../models/competitionsModel');
 const cron = require('node-cron');
 
 
-//TESTING
+
+
 
 // Register Admin and Send OTP
 const registerAdmin = async (req, res) => {
@@ -93,8 +94,11 @@ const verifyOtp = async (req, res) => {
   } catch (error) {
     console.error("Error verifying OTP:", error);
     return res.status(500).json({ error: "Internal server error" });
-  }
-}
+  
+
+
+  }}
+
 
 
 
