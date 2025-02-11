@@ -14,6 +14,46 @@ const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 
 
+const loginUser = async (req, res) => {
+  try {
+    console.log("user login started");
+    const {phone, password } = req.body;
+
+    // Validate input
+    if (!phone || !password) {
+      return res.status(400).json({ error: "Email and password are required." });
+    }
+
+    // Find the user by email
+    const user = await User.findOne({ phone });
+    if (!user) {
+      return res.status(400).json({ error: "User not found. Please register first." });
+    }
+
+    // Compare the provided password with the stored hashed password
+    const isPasswordMatch = await bcrypt.compare(password, user.password);
+    if (!isPasswordMatch) {
+      return res.status(400).json({ error: "Invalid credentials. Please try again." });
+    }
+
+    // Generate JWT tokens
+    const { token, refreshToken } = generateToken(user.name, user.phone, "user");
+console.log("user login done");
+
+    // Send the response
+    res.status(200).json({
+      message: "Login successful!",
+      token,
+      refreshToken,
+      user,
+    });
+  } catch (error) {
+    console.error("Error during login:", error);
+    res.status(500).json({ error: "An error occurred during login. Please try again later." });
+  }
+};
+
+
 
 
 
@@ -184,58 +224,6 @@ const resendOtp = async (req, res) => {
 
 
 
-const loadLoginPage = (req, res) => {
-  try {
-    res.status(200).json({ message: 'Welcome to the Login Page!' });
-  } catch (error) {
-    console.error('Error loading login page:', error);
-    res.status(500).json({ error: 'An error occurred while loading the login page.' });
-  }
-};
-
-
-
-
-
-
-
-const login = async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    console.log("@@@@@@@@@@@@@@@", req.body)
-
-    // Validate required fields
-    if (!email || !password) {
-      return res.status(400).json({ error: 'Email and Password are required.' });
-    }
-
-    // Check if the user exists
-    const user = await User.findOne({ email });
-    if (!user) {
-      return res.status(400).json({ error: 'Invalid email or password.' });
-    }
-
-    // Validate the password
-    const isPasswordValid = await bcrypt.compare(password, user.password);
-    if (!isPasswordValid) {
-      return res.status(400).json({ error: 'Invalid email or password.' });
-    }
-
-    // Set the user in the session (or use JWT for token-based authentication)
-    req.session.user = {
-      id: user._id,
-      name: user.name,
-      email: user.email,
-    };
-
-    // Respond with success
-    res.status(200).json({ message: 'Login successful!', user: req.session.user });
-  } catch (error) {
-    console.error('Error during login:', error);
-    res.status(500).json({ error: 'An error occurred during login. Please try again later.' });
-  }
-};
-
 
 
 
@@ -316,11 +304,10 @@ const loadCompetitionDetailsPage = async (req, res) => {
 
 
 module.exports = {
+  loginUser ,
   registerUser,
   verifyOtpAndRegister,
   resendOtp,
-  loadLoginPage,
-  login,
   loadHomePage,
   loadCompetitionsPage,
   loadCompetitionDetailsPage

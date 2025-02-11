@@ -5,7 +5,53 @@ const { sendEmailWithOTP, generateOTP } = require('../helper/nodeMailer');
 const Admin = require('../models/adminModel');
 const Trekking = require('../models/trekkingModel');
 const Competition = require('../models/competitionsModel');
+const products = require('../models/productModel');
 const cron = require('node-cron');
+
+
+
+
+
+
+
+const adminLogin = async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    // Validate input
+    if (!email || !password) {
+      return res.status(400).json({ error: "Email and password are required." });
+    }
+
+    // Find the admin by email
+    const admin = await Admin.findOne({ email });
+    if (!admin) {
+      return res.status(400).json({ error: "Admin not found. Please register first." });
+    }
+
+    // Compare the provided password with the stored hashed password
+    const isPasswordMatch = await bcrypt.compare(password, admin.password);
+    if (!isPasswordMatch) {
+      return res.status(400).json({ error: "Invalid credentials. Please try again." });
+    }
+
+    // Generate JWT tokens
+    const { token, refreshToken } = generateToken(admin.name, admin.email, "admin");
+
+    // Send the response
+    return res.status(200).json({
+      message: "Login successful!",
+      token,
+      refreshToken,
+      admin,
+    });
+  } catch (error) {
+    console.error("Error during admin login:", error);
+    return res.status(500).json({ error: "An error occurred during login. Please try again later." });
+  }
+};
+
+
 
 
 
@@ -475,7 +521,215 @@ const deleteTrekking = async (req, res) => {
 
 
 
+
+const loadProductsPage = async (req, res) => {
+  try {
+    // Fetch all products from the database, sorted by creation date (newest first)
+    const Products = await products.find().sort({ createdAt: -1 });
+
+    if (!Products || Products.length === 0) {
+      return res.status(200).json({
+        message: "No products found.",
+        Products: [],
+      });
+    }
+
+    return res.status(200).json({
+      message: "Products loaded successfully.",
+      Products ,
+    });
+  } catch (error) {
+    console.error("Error loading products:", error);
+    return res.status(500).json({
+      message: "Failed to load products.",
+      error: error.message,
+    });
+  }
+};
+
+
+
+const loadAddProduct = (req, res) => {
+  try {
+    return res.status(200).json({
+      message: "Add product page loaded successfully."
+    });
+  } catch (error) {
+    console.error('Error loading Add Product page:', error);
+    return res.status(500).json({
+      message: 'Internal Server Error'
+    });
+  }
+};
+
+
+const addProduct = async (req, res) => {
+  try {
+    const {
+      name,
+      description,
+      price,
+      discount,
+      category,
+      brand,
+      sizes, // Sizes array with colors and stock quantities
+      material,
+      images,
+      rating,
+    } = req.body;
+
+    // Validate sizes and colors (optional, but can be added for better error handling)
+    if (!sizes || sizes.length === 0) {
+      return res.status(400).json({ message: 'Product must have at least one size.' });
+    }
+
+    // Create and save the new product
+    const product = new products({
+      name,
+      description,
+      price,
+      discount: discount || 0, // Default to 0 if not provided
+      category,
+      brand,
+      sizes, // sizes array will contain sizes and colors with stock
+      material,
+      images,
+      rating: rating || 0, // Default to 0 if not provided
+    });
+
+    await product.save();
+
+    return res.status(200).json({
+      message: 'Product added successfully.',
+      product,
+    });
+  } catch (error) {
+    console.error('Error adding product:', error);
+    return res.status(500).json({
+      message: 'Failed to add product.',
+      error: error.message,
+    });
+  }
+};
+
+
+
+
+const loadEditProduct = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    // Fetch the product by ID
+    const product = await products.findById(id);
+
+    if (!product) {
+      return res.status(404).json({
+        message: 'Product not found.',
+      });
+    }
+
+    return res.status(200).json({
+      message: 'Product fetched successfully.',
+      product,
+    });
+  } catch (error) {
+    console.error('Error fetching product:', error);
+    return res.status(500).json({
+      message: 'Failed to fetch product.',
+      error: error.message,
+    });
+  }
+};
+
+
+const editProduct = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const {
+      name,
+      description,
+      price,
+      discount,
+      category,
+      brand,
+      sizes, // Sizes array with colors and stock quantities
+      material,
+      images,
+      rating,
+    } = req.body;
+
+    // Fetch the product to get existing details
+    const existingProduct = await products.findById(id);
+
+    if (!existingProduct) {
+      return res.status(404).json({
+        message: 'Product not found.',
+      });
+    }
+
+    // Update the product with new data
+    const updatedProduct = await products.findByIdAndUpdate(
+      id,
+      {
+        name: name || existingProduct.name,
+        description: description || existingProduct.description,
+        price: price || existingProduct.price,
+        discount: discount || existingProduct.discount,
+        category: category || existingProduct.category,
+        brand: brand || existingProduct.brand,
+        sizes: sizes || existingProduct.sizes, // Sizes will be updated as well
+        material: material || existingProduct.material,
+        images: images || existingProduct.images,
+        rating: rating || existingProduct.rating,
+      },
+      { new: true, runValidators: true } // Return updated document and apply validation
+    );
+
+    return res.status(200).json({
+      message: 'Product updated successfully.',
+      product: updatedProduct,
+    });
+  } catch (error) {
+    console.error('Error editing product:', error);
+    return res.status(500).json({
+      message: 'Failed to edit product.',
+      error: error.message,
+    });
+  }
+};
+
+
+
+
+const deleteProduct = async (req, res) => {
+  try {
+    const { id } = req.params;
+
+    const product = await products.findByIdAndDelete(id);
+
+    if (!product) {
+      return res.status(404).json({
+        message: 'Product not found.',
+      });
+    }
+
+    return res.status(200).json({
+      message: 'Product deleted successfully.',
+    });
+  } catch (error) {
+    console.error('Error deleting product:', error);
+    return res.status(500).json({
+      message: 'Failed to delete product.',
+      error: error.message,
+    });
+  }
+};
+
+
+
 module.exports = {
+  adminLogin,
   registerAdmin,
   verifyOtp,
   resendOTP,
@@ -490,5 +744,12 @@ module.exports = {
   addTrekking,
   loadEditTrekking,
   editTrekking,
-  deleteTrekking
+  deleteTrekking,
+  loadProductsPage,
+  loadAddProduct,
+  addProduct,
+  loadEditProduct,
+  editProduct,
+  deleteProduct
+
 };

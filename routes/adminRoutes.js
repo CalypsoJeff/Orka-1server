@@ -2,6 +2,10 @@ const express = require("express");
 const router = express.Router();
 const adminController = require("../controllers/adminController");
 
+
+
+
+router.post('/adminLogin', adminController.adminLogin);
 router.post('/register', adminController.registerAdmin);
 router.post('/verify-otp', adminController.verifyOtp);
 router.post('/resend-otp', adminController.resendOTP);
@@ -23,4 +27,12 @@ router.put('/edit-trekking/:id', adminController.editTrekking);
 router.delete('/delete-trekking/:id', adminController.deleteTrekking);
 
 
+
+//routes for products
+router.get('/products',adminController.loadProductsPage);
+router.get('/add-product', adminController.loadAddProduct);
+router.post('/add-product', adminController.addProduct);
+router.get('/edit-product/:id', adminController.loadEditProduct);
+router.put('/edit-product/:id', adminController.editProduct);
+router.delete('/delete-product/:id', adminController.deleteProduct);
 module.exports = router;
