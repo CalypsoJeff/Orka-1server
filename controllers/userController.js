@@ -64,6 +64,14 @@ const registerUser = async (req, res) => {
 
 
 
+
+
+
+
+
+
+
+
 const verifyOtpAndRegister = async (req, res) => {
   try {
     const { phone, otp } = req.body;
