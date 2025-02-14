@@ -70,56 +70,56 @@ const userSchema = new mongoose.Schema({
   //       default: Date.now
   //     }
   //   }
-  // ],
-  // registeredCompetitions: [
-  //   {
-  //     competitionId: {
-  //       type: mongoose.Schema.Types.ObjectId,
-  //       ref: 'Competition',
+  //],
+  registeredCompetitions: [
+    {
+      competitionId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Competition',
      
-  //     },
-  //     registrationDate: {
-  //       type: Date,
-  //       default: Date.now
-  //     }
-  //   }
-  // ],
-  // registeredTrekkingEvents: [
-  //   {
-  //     trekkingId: {
-  //       type: mongoose.Schema.Types.ObjectId,
-  //       ref: 'Trekking',
+      },
+      registrationDate: {
+        type: Date,
+        default: Date.now
+      }
+    }
+  ],
+  registeredTrekkingEvents: [
+    {
+      trekkingId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Trekking',
    
-  //     },
-  //     registrationDate: {
-  //       type: Date,
-  //       default: Date.now
-  //     }
-  //   }
-  // ],
-  // registeredBikeRides: [
-  //   {
-  //     rideId: {
-  //       type: mongoose.Schema.Types.ObjectId,
-  //       ref: 'BikeRide',
+      },
+      registrationDate: {
+        type: Date,
+        default: Date.now
+      }
+    }
+  ],
+  registeredBikeRides: [
+    {
+      rideId: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'BikeRide',
       
-  //     },
-  //     registrationDate: {
-  //       type: Date,
-  //       default: Date.now
-  //     }
-  //   }
-  // ],
+      },
+      registrationDate: {
+        type: Date,
+        default: Date.now
+      }
+    }
+  ],
   // role: {
   //   type: String,
   //   enum: ['User', 'Admin'],
   //   default: 'User'
   // },
-  // status: {
-  //   type: String,
-  //   enum: ['Active', 'Inactive', 'Banned'],
-  //   default: 'Active'
-  // },
+  status: {
+    type: String,
+    enum: ['Active', 'Inactive', 'Banned'],
+    default: 'Active'
+  },
   createdAt: {
     type: Date,
     default: Date.now

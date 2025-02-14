@@ -1,11 +1,12 @@
 const bcrypt = require('bcrypt');
-const jwt = require('jsonwebtoken');
 const redis = require('../helper/redisClient').default;
 const { sendEmailWithOTP, generateOTP } = require('../helper/nodeMailer');
+const { generateResetToken, generateToken, validateResetToken } = require('../helper/jwtHelper');
 const Admin = require('../models/adminModel');
 const Trekking = require('../models/trekkingModel');
 const Competition = require('../models/competitionsModel');
 const products = require('../models/productModel');
+const Users = require('../models/UserModel');
 const cron = require('node-cron');
 
 
@@ -562,7 +563,6 @@ const loadAddProduct = (req, res) => {
   }
 };
 
-
 const addProduct = async (req, res) => {
   try {
     const {
@@ -570,7 +570,7 @@ const addProduct = async (req, res) => {
       description,
       price,
       discount,
-      category,
+      category, // Category should be an ObjectId
       brand,
       sizes, // Sizes array with colors and stock quantities
       material,
@@ -583,8 +583,14 @@ const addProduct = async (req, res) => {
       return res.status(400).json({ message: 'Product must have at least one size.' });
     }
 
+    // Validate the category reference
+    const categoryExists = await Category.findById(category);
+    if (!categoryExists) {
+      return res.status(400).json({ message: 'Invalid category reference.' });
+    }
+
     // Create and save the new product
-    const product = new products({
+    const product = new Product({
       name,
       description,
       price,
@@ -641,7 +647,6 @@ const loadEditProduct = async (req, res) => {
   }
 };
 
-
 const editProduct = async (req, res) => {
   try {
     const { id } = req.params;
@@ -651,7 +656,7 @@ const editProduct = async (req, res) => {
       description,
       price,
       discount,
-      category,
+      category, // Category should be an ObjectId
       brand,
       sizes, // Sizes array with colors and stock quantities
       material,
@@ -660,7 +665,7 @@ const editProduct = async (req, res) => {
     } = req.body;
 
     // Fetch the product to get existing details
-    const existingProduct = await products.findById(id);
+    const existingProduct = await Product.findById(id);
 
     if (!existingProduct) {
       return res.status(404).json({
@@ -668,8 +673,16 @@ const editProduct = async (req, res) => {
       });
     }
 
+    // Validate the category reference if it's provided
+    if (category) {
+      const categoryExists = await Category.findById(category);
+      if (!categoryExists) {
+        return res.status(400).json({ message: 'Invalid category reference.' });
+      }
+    }
+
     // Update the product with new data
-    const updatedProduct = await products.findByIdAndUpdate(
+    const updatedProduct = await Product.findByIdAndUpdate(
       id,
       {
         name: name || existingProduct.name,
@@ -728,6 +741,118 @@ const deleteProduct = async (req, res) => {
 
 
 
+
+
+
+const getUsers = async (req, res) => {
+  try {
+    // Fetch all users from the database
+    const users = await Users.find({}).select('name email phone status'); // Select only the necessary fields
+
+    if (!users || users.length === 0) {
+      return res.status(404).json({
+        message: 'No users found.',
+      });
+    }
+
+    return res.status(200).json({
+      message: 'Users fetched successfully.',
+      users,
+    });
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    return res.status(500).json({
+      message: 'Failed to fetch users.',
+      error: error.message,
+    });
+  }
+};
+
+
+
+
+const blockUser = async (req, res) => {
+  try {
+    const { phone} = req.body;
+
+    // Find the user by email
+    const user = await  Users.findOne({ phone });
+
+    if (!user) {
+      return res.status(404).json({
+        message: 'User not found.',
+      });
+    }
+
+    // Check if the user is already banned
+    if (user.status === 'Banned') {
+      return res.status(400).json({
+        message: 'User is already banned.',
+      });
+    }
+
+    // Update the user's status to 'Banned'
+    user.status = 'Banned';
+
+    // Save the updated user status
+    await user.save();
+
+    return res.status(200).json({
+      message: 'User blocked (banned) successfully.',
+      user,
+    });
+  } catch (error) {
+    console.error('Error blocking user:', error);
+    return res.status(500).json({
+      message: 'Failed to block user.',
+      error: error.message,
+    });
+  }
+};
+
+
+
+
+const unblockUser = async (req, res) => {
+  try {
+    const {phone } = req.body;
+
+    // Find the user by email
+    const user = await  Users.findOne({phone });
+
+    if (!user) {
+      return res.status(404).json({
+        message: 'User not found.',
+      });
+    }
+
+    // Check if the user is already active
+    if (user.status === 'Active') {
+      return res.status(400).json({
+        message: 'User is already active.',
+      });
+    }
+
+    // Update the user's status to 'Active'
+    user.status = 'Active';
+
+    // Save the updated user status
+    await user.save();
+
+    return res.status(200).json({
+      message: 'User unblocked (activated) successfully.',
+      user,
+    });
+  } catch (error) {
+    console.error('Error unblocking user:', error);
+    return res.status(500).json({
+      message: 'Failed to unblock user.',
+      error: error.message,
+    });
+  }
+};
+
+
 module.exports = {
   adminLogin,
   registerAdmin,
@@ -750,6 +875,9 @@ module.exports = {
   addProduct,
   loadEditProduct,
   editProduct,
-  deleteProduct
+  deleteProduct,
+  getUsers,
+  blockUser,
+  unblockUser
 
 };

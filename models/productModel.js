@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const Category = require('./Category'); // Import the Category model
 
 // Define the Product Schema
 const productSchema = new mongoose.Schema(
@@ -23,19 +24,9 @@ const productSchema = new mongoose.Schema(
       default: 0, // Percentage discount, 0 means no discount
     },
     category: {
-      type: String,
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Category', // Reference to Category model
       required: true,
-      enum: [
-        'Jackets',
-        'Helmets',
-        'Riding Jackets',
-        'Riding Boots',
-        'Gloves',
-        'Protective Gear',
-        'Pants',
-        'Accessories',
-        // Add more categories as needed
-      ],
     },
     brand: {
       type: String,

@@ -1,6 +1,5 @@
 const bcrypt = require('bcrypt');
 const redis = require("../helper/redisClient").default;
-const jwt = require("jsonwebtoken");
 const { generateOTP, sendOTP } = require("../helper/twiloOtp");
 const User = require('../models/UserModel');
 const { OAuth2Client } = require("google-auth-library");
@@ -29,6 +28,17 @@ const loginUser = async (req, res) => {
     if (!user) {
       return res.status(400).json({ error: "User not found. Please register first." });
     }
+
+
+ // Check if the user is banned
+ if (user.status === 'Banned') {
+  return res.status(403).json({
+    message: 'Your account is banned. Please contact support.',
+  });
+}
+
+
+
 
     // Compare the provided password with the stored hashed password
     const isPasswordMatch = await bcrypt.compare(password, user.password);
@@ -72,6 +82,16 @@ const registerUser = async (req, res) => {
     if (existingUser) {
       return res.status(400).json({ error: "Email or Mobile Number already registered." });
     }
+
+
+    if (existingUser) {
+      if (existingUser.status === 'Banned') {
+        return res.status(400).json({
+          message: 'This email or phone number is banned and cannot be used to register.',
+        });
+      }
+    }
+
 
     const otp = generateOTP();
 

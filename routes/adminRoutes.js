@@ -35,4 +35,11 @@ router.post('/add-product', adminController.addProduct);
 router.get('/edit-product/:id', adminController.loadEditProduct);
 router.put('/edit-product/:id', adminController.editProduct);
 router.delete('/delete-product/:id', adminController.deleteProduct);
+
+
+
+//for users
+router.get('/userController',adminController.getUsers);
+router.patch('/user/block', adminController.blockUser);
+router.patch('/user/unblock', adminController.unblockUser);
 module.exports = router;
