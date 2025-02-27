@@ -545,6 +545,21 @@ const addProductCategory = async (req, res) => {
 };
 
 
+// Controller to list all categories
+const getAllProductCategories = async (req, res) => {
+  try {
+    // Fetch all categories from the database
+    const categories = await productsCategory .find();
+
+    res.status(200).json({ message: 'Categories fetched successfully', categories });
+  } catch (error) {
+    console.error('Error fetching categories:', error);
+    res.status(500).json({ message: 'Failed to fetch categories', error: error.message });
+  }
+};
+
+
+
 
 // Controller to delete a category by ID
 const deleteProductCategory = async (req, res) => {
@@ -565,6 +580,68 @@ const deleteProductCategory = async (req, res) => {
     res.status(500).json({ message: 'Failed to delete category', error: error.message });
   }
 };
+
+
+
+// Controller to edit an existing category
+const editProductCategory = async (req, res) => {
+  try {
+    const { categoryId } = req.params;
+    const { name, description } = req.body;
+
+    // Check if the category exists
+    const category = await productsCategory.findById(categoryId);
+    if (!category) {
+      return res.status(404).json({ message: 'Category not found.' });
+    }
+
+    // Check if the new name already exists
+    const existingCategory = await productsCategory.findOne({ name });
+    if (existingCategory && existingCategory._id.toString() !== categoryId) {
+      return res.status(400).json({ message: 'Category name already exists.' });
+    }
+
+    // Update the category
+    category.name = name || category.name;
+    category.description = description || category.description;
+
+    // Save the updated category
+    const updatedCategory = await category.save();
+
+    res.status(200).json({ message: 'Category updated successfully', category: updatedCategory });
+  } catch (error) {
+    console.error('Error editing category:', error);
+    res.status(500).json({ message: 'Failed to edit category', error: error.message });
+  }
+};
+
+
+
+
+// Controller to change the status (list/unlist) of a category
+const toggleProductCategoryStatus = async (req, res) => {
+  try {
+    const { categoryId } = req.params;
+
+    // Find the category by ID
+    const category = await productsCategory.findById(categoryId);
+    if (!category) {
+      return res.status(404).json({ message: 'Category not found.' });
+    }
+
+    // Toggle the status between 'active' and 'inactive'
+    category.status = category.status === 'active' ? 'inactive' : 'active';
+
+    // Save the updated category status
+    const updatedCategory = await category.save();
+
+    res.status(200).json({ message: 'Category status updated successfully', category: updatedCategory });
+  } catch (error) {
+    console.error('Error toggling category status:', error);
+    res.status(500).json({ message: 'Failed to update category status', error: error.message });
+  }
+};
+
 
 
 
@@ -1052,7 +1129,10 @@ module.exports = {
   editTrekking,
   deleteTrekking,
   addProductCategory,
+  getAllProductCategories,
  deleteProductCategory,
+ editProductCategory,
+ toggleProductCategoryStatus ,
   loadProductsPage,
   loadAddProduct,
   addProduct,
