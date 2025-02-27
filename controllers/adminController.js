@@ -561,27 +561,6 @@ const getAllProductCategories = async (req, res) => {
 
 
 
-// Controller to delete a category by ID
-const deleteProductCategory = async (req, res) => {
-  try {
-    const categoryId = req.params.id;
-
-    // Check if the category exists
-    const category = await productsCategory.findById(categoryId);
-    if (!category) {
-      return res.status(404).json({ message: 'Category not found' });
-    }
-
-    // Delete the category
-    await productsCategory.findByIdAndDelete(categoryId);
-    res.status(200).json({ message: 'Category deleted successfully' });
-  } catch (error) {
-    console.error('Error deleting category:', error);
-    res.status(500).json({ message: 'Failed to delete category', error: error.message });
-  }
-};
-
-
 
 // Controller to edit an existing category
 const editProductCategory = async (req, res) => {
