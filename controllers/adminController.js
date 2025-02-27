@@ -6,6 +6,7 @@ const Admin = require('../models/adminModel');
 const Trekking = require('../models/trekkingModel');  
 const Competition = require('../models/competitionsModel');
 const products = require('../models/productModel');
+const productsCategory = require('../models/productCategory');
 const Users = require('../models/UserModel');
 const Fitness = require('../models/fitnessModel'); 
 const FitnessCategory = require('../models/fitenssCategory'); 
@@ -516,6 +517,58 @@ const deleteTrekking = async (req, res) => {
 
 
 
+
+// Controller to add a new category
+const addProductCategory = async (req, res) => {
+  try {
+    const { name, description } = req.body;
+
+    // Check if category with the same name already exists
+    const existingCategory = await  productsCategory.findOne({ name });
+    if (existingCategory) {
+      return res.status(400).json({ message: 'Category already exists.' });
+    }
+
+    // Create a new category instance
+    const newCategory = new productsCategory({
+      name,
+      description,
+    });
+
+    // Save the category to the database
+    const savedCategory = await newCategory.save();
+    res.status(201).json({ message: 'Category added successfully', category: savedCategory });
+  } catch (error) {
+    console.error('Error adding category:', error);
+    res.status(500).json({ message: 'Failed to add category', error: error.message });
+  }
+};
+
+
+
+// Controller to delete a category by ID
+const deleteProductCategory = async (req, res) => {
+  try {
+    const categoryId = req.params.id;
+
+    // Check if the category exists
+    const category = await productsCategory.findById(categoryId);
+    if (!category) {
+      return res.status(404).json({ message: 'Category not found' });
+    }
+
+    // Delete the category
+    await productsCategory.findByIdAndDelete(categoryId);
+    res.status(200).json({ message: 'Category deleted successfully' });
+  } catch (error) {
+    console.error('Error deleting category:', error);
+    res.status(500).json({ message: 'Failed to delete category', error: error.message });
+  }
+};
+
+
+
+
 const loadProductsPage = async (req, res) => {
   try {
     // Fetch all products from the database, sorted by creation date (newest first)
@@ -998,6 +1051,8 @@ module.exports = {
   loadEditTrekking,
   editTrekking,
   deleteTrekking,
+  addProductCategory,
+ deleteProductCategory,
   loadProductsPage,
   loadAddProduct,
   addProduct,

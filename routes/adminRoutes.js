@@ -29,7 +29,7 @@ router.post('/resend-otp', adminController.resendOTP);
 
 
 //for competitions 
-router.put('/competitions', adminController.loadCompetitionsPage);
+router.get('/competitions', adminController.loadCompetitionsPage);
 router.post('/add-Competitions', uploads, adminController.addCompetition);
 router.put('/edit-competition/:id', uploads, adminController.editCompetition);
 router.delete('/delete-competition/:id', adminController.deleteCompetition);
@@ -46,6 +46,8 @@ router.delete('/delete-trekking/:id', adminController.deleteTrekking);
 //routes for products
 router.get('/products',adminController.loadProductsPage);
 router.get('/add-product', adminController.loadAddProduct);
+router.post('/add-product-category', adminController.addProductCategory);
+router.delete('/delete-product-category/:id', adminController.deleteProductCategory);
 router.post('/add-product', adminController.addProduct);
 router.get('/edit-product/:id', adminController.loadEditProduct);
 router.put('/edit-product/:id', adminController.editProduct);

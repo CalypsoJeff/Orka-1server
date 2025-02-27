@@ -343,7 +343,7 @@ const loadCompetitionDetailsPage = async (req, res) => {
 const registerForCompetition = async (req, res) => {
   try {
     const { competitionId, name, email, phone } = req.body;
-    const user = req.user; // Logged-in user details
+    const user = req.user; 
 
     if (!competitionId || !name || !email || !phone) {
       return res.status(400).json({ error: 'All fields are required.' });
@@ -360,13 +360,13 @@ const registerForCompetition = async (req, res) => {
       return res.status(400).json({ error: 'You are already registered for this competition.' });
     }
 
-    // Save user registration details
-    user.registeredCompetitions.push({
-      competitionId,
-      registrationDate: new Date(),
-    });
+    // // Save user registration details
+    // user.registeredCompetitions.push({
+    //   competitionId,
+    //   registrationDate: new Date(),
+    // });
 
-    await user.save();
+    // await user.save();
 
     // Return registration details and cost
     return res.status(200).json({
@@ -377,6 +377,30 @@ const registerForCompetition = async (req, res) => {
   } catch (error) {
     console.error('Error during competition registration:', error);
     res.status(500).json({ error: 'An error occurred during registration.' });
+  }
+};
+
+
+
+
+const showPaymentConfirmation = async (req, res) => {
+  try {
+    const { competitionId } = req.params;  // Competition ID passed in params
+    const competition = await Competition.findById(competitionId);
+
+    if (!competition) {
+      return res.status(404).json({ error: 'Competition not found.' });
+    }
+
+    // Send details to the front end to show before payment
+    return res.status(200).json({
+      message: 'Payment confirmation details.',
+      competition,
+      cost: competition.cost,
+    });
+  } catch (error) {
+    console.error('Error showing payment confirmation:', error);
+    res.status(500).json({ error: 'An error occurred while showing payment confirmation.' });
   }
 };
 

@@ -16,11 +16,16 @@ const categorySchema = new mongoose.Schema(
       type: Date,
       default: Date.now,
     },
+    status: {
+      type: String,
+      enum: ['active', 'inactive'],
+      default: 'active',
+    }
   },
   { timestamps: true }
 );
 
 // Create the Category model
-const Category = mongoose.model('Category', categorySchema);
+const productCategory = mongoose.model('Category', categorySchema);
 
-module.exports = Category;
+module.exports = productCategory;
