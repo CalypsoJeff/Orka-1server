@@ -3,11 +3,16 @@ const redis = require('../helper/redisClient').default;
 const { sendEmailWithOTP, generateOTP } = require('../helper/nodeMailer');
 const { generateResetToken, generateToken, validateResetToken } = require('../helper/jwtHelper');
 const Admin = require('../models/adminModel');
-const Trekking = require('../models/trekkingModel');
+const Trekking = require('../models/trekkingModel');  
 const Competition = require('../models/competitionsModel');
 const products = require('../models/productModel');
 const Users = require('../models/UserModel');
+const Fitness = require('../models/fitnessModel'); 
+const FitnessCategory = require('../models/fitenssCategory'); 
 const cron = require('node-cron');
+const { uploadToS3 } = require('../helper/s3Uploader');
+
+
 
 
 
@@ -227,12 +232,15 @@ const loadAddCompetition = (req, res) => {
 
 
 
+
+
 const addCompetition = async (req, res) => {
   try {
+    console.log("🔥 Raw Request Body:", req.body); // Log text fields
+    console.log("🖼️ Received Images:", req.files); // Log uploaded images
     const {
       name,
       category,
-      image,
       time,
       date,
       place,
@@ -244,14 +252,25 @@ const addCompetition = async (req, res) => {
       cost,
       maxRegistrations,
       description,
-      status, // Include status in the request body
+      status,
     } = req.body;
+
+    const files = req.files;
+    const images = files?.images?.[0];
+    if (!images) {
+      console.error("Competition Image is missing.");
+      return res
+        .status(400)
+        .json({ message: "Competition Image is required" });
+    }
+    const { Location } = await uploadToS3(images);
+    console.log("🔥 Uploaded Image URL:", Location);
 
     // Create and save the new competition
     const competition = new Competition({
       name,
       category,
-      image,
+      image: Location,
       time,
       date,
       place,
@@ -265,12 +284,7 @@ const addCompetition = async (req, res) => {
       description,
       status: status || 'inactive',
     });
-
     await competition.save();
-
-
-    await competition.save();
-
     return res.status(200).json({
       message: 'Competition added successfully.',
       competition,
@@ -286,57 +300,12 @@ const addCompetition = async (req, res) => {
 
 
 
-
-const loadEditCompetition = async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    // Fetch the competition by ID
-    const competition = await Competition.findById(id);
-
-    if (!competition) {
-      return res.status(404).json({
-        message: 'Competition not found.',
-      });
-    }
-
-    // Fetch additional lists from related models (example: Category, State, etc.)
-    const categories = await Category.find({}, 'name'); // Fetch only the 'name' field
-    const states = await State.find({}, 'name'); // Fetch state names
-    const types = await CompetitionType.find({}, 'name'); // Fetch competition types
-
-    // Render the edit page, passing competition data and related lists
-    return res.status(200).json({
-      message: 'Competition fetched successfully.',
-      competition,
-      lists: {
-        categories, // List of categories
-        states,     // List of states
-        types,      // List of competition types
-      },
-    });
-  } catch (error) {
-    console.error('Error fetching competition:', error);
-    return res.status(500).json({
-      message: 'Failed to fetch competition.',
-      error: error.message,
-    });
-  }
-};
-
-
-
-
-
-
 const editCompetition = async (req, res) => {
   try {
     const { id } = req.params;
-
     const {
       name,
       category,
-      image,
       time,
       date,
       place,
@@ -351,6 +320,21 @@ const editCompetition = async (req, res) => {
       status,
     } = req.body;
 
+    console.log("🔥 Raw Request Body:", req.body); // Log text fields
+    console.log("🖼️ Received Images:", req.files); // Log uploaded images
+
+    const files = req.files;
+    const images = files?.images?.[0];
+    if (!images) {
+      console.error("Competition Image is missing.");
+      return res
+        .status(400)
+        .json({ message: "Competition Image is required" });
+    }
+    const { Location } = await uploadToS3(images);
+    console.log("🔥 Uploaded Image URL:", Location);
+
+
     // Fetch the competition to get existing details
     const existingCompetition = await Competition.findById(id);
 
@@ -360,13 +344,12 @@ const editCompetition = async (req, res) => {
       });
     }
 
-    // Update only if the new value exists; otherwise, retain the old value
     const updatedCompetition = await Competition.findByIdAndUpdate(
       id,
       {
         name: name || existingCompetition.name,
         category: category || existingCompetition.category,
-        image: image || existingCompetition.image,
+        image: Location || existingCompetition.image,
         time: time || existingCompetition.time,
         date: date || existingCompetition.date,
         place: place || existingCompetition.place,
@@ -380,7 +363,7 @@ const editCompetition = async (req, res) => {
         description: description || existingCompetition.description,
         status: status || existingCompetition.status,
       },
-      { new: true, runValidators: true } // Return updated document and apply validation
+      { new: true, runValidators: true }
     );
 
     return res.status(200).json({
@@ -395,6 +378,7 @@ const editCompetition = async (req, res) => {
     });
   }
 };
+
 
 
 
@@ -456,12 +440,20 @@ const loadAddTrekking = (req, res) => {
 
 
 
-// Add Trekking Event
 const addTrekking = async (req, res) => {
   try {
-    const { name, category, image, trekDistance, trekDuration, costPerPerson, startDate, difficulty, maxParticipants, place, state, district, description } = req.body;
+    const { name, category, trekDistance, trekDuration, costPerPerson, startDate, difficulty, maxParticipants, place, state, district, description } = req.body;
+    console.log("🔥 Raw Request Body:", req.body); // Log text fields
+    console.log("🖼️ Received Images:", req.files); // Log uploaded images
+    if (!req.file) {
+      return res.status(400).json({ message: "Image is required." });
+    }
 
-    const trekkingEvent = new Trekking({ name, category, image, trekDistance, trekDuration, costPerPerson, startDate, difficulty, maxParticipants, place, state, district, description });
+    // ✅ Upload Image to S3
+    const { Location } = await uploadToS3(req.file);
+    console.log("🔥 Uploaded Image URL:", Location);
+
+    const trekkingEvent = new Trekking({ name, category, image: Location, trekDistance, trekDuration, costPerPerson, startDate, difficulty, maxParticipants, place, state, district, description });
     await trekkingEvent.save();
     return res.status(200).json({ message: "Trekking event added successfully.", trekkingEvent });
   } catch (error) {
@@ -472,7 +464,6 @@ const addTrekking = async (req, res) => {
 
 
 
-// Load Edit Trekking Event
 const loadEditTrekking = async (req, res) => {
   try {
     const { id } = req.params;
@@ -489,11 +480,13 @@ const loadEditTrekking = async (req, res) => {
 
 
 
-// Edit Trekking Event
 const editTrekking = async (req, res) => {
   try {
     const { id } = req.params;
     const { name, category, image, trekDistance, trekDuration, costPerPerson, startDate, difficulty, maxParticipants, place, state, district, description } = req.body;
+    console.log("🔥 ID", id); 
+    console.log("🔥 Raw Request Body:", req.body); 
+    console.log("🖼️ Received Images:", req.files); 
     const updatedTrekking = await Trekking.findByIdAndUpdate(id, { name, category, image, trekDistance, trekDuration, costPerPerson, startDate, difficulty, maxParticipants, place, state, district, description }, { new: true, runValidators: true });
     if (!updatedTrekking) {
       return res.status(404).json({ message: "Trekking event not found." });
@@ -853,6 +846,142 @@ const unblockUser = async (req, res) => {
 };
 
 
+
+
+
+
+
+const addFitness = async (req, res) => {
+  console.log("Entering add fitness");
+
+  // Ensure video files are uploaded for each workout
+  if (!req.files || req.files.length === 0) {
+    return res.status(400).json({ message: 'Each workout must have an animated video.' });
+  }
+
+  try {
+    const {
+      name,
+      description,
+      categories, 
+      difficulty,
+      duration,
+      workouts, 
+      equipment,
+      targetMuscles,
+      caloriesBurned,
+    } = req.body;
+
+
+
+  // Validate that workouts are provided and in the correct format
+  if (!workouts || workouts.length === 0) {
+    return res.status(400).json({ message: 'At least one workout must be added.' });
+  }
+
+  // Ensure categories array is not empty
+  if (!categories || categories.length === 0) {
+    return res.status(400).json({ message: 'At least one category must be selected.' });
+  }
+
+  // Fetch the category by ID (ensure the category exists)
+  const category = await FitnessCategory.findById(categories[0]); // Assuming single category for simplicity
+  if (!category) {
+    return res.status(400).json({ message: 'Invalid category selected.' });
+  }
+
+  // Check if a fitness model with the same name already exists in the selected category
+  const existingFitness = await Fitness.findOne({
+    name: name.trim(),
+    categories: categories[0], // Match by category ID
+  });
+
+  if (existingFitness) {
+    return res.status(400).json({ message: 'A fitness exercise with this name already exists in this category.' });
+  }
+
+  // Format the workouts array
+  const formattedWorkouts = workouts.map((workout) => ({
+    name: workout.name,
+    restTime: workout.restTime,
+     videoUrl: req.files[index].location, // If you re-enable file uploads
+  }));
+
+
+    // Create and save the new fitness exercise
+    const fitness = new Fitness({
+      name,
+      description,
+      categories,
+      difficulty,
+      duration,
+      workouts: formattedWorkouts,
+      equipment,
+      targetMuscles,
+      caloriesBurned: caloriesBurned || null,
+    });
+
+    // Save the fitness exercise to the database
+    await fitness.save();
+
+    return res.status(200).json({
+      message: 'Fitness exercise added successfully.',
+      fitness,
+    });
+  } catch (error) {
+    console.error('Error adding fitness exercise:', error);
+    return res.status(500).json({
+      message: 'Failed to add fitness exercise.',
+      error: error.message,
+    });
+  }
+};
+
+
+
+
+
+
+// Controller to add a new fitness category
+const addFitnessCategory = async (req, res) => {
+  try {
+    const { name } = req.body;
+
+    // Check if the category name is provided
+    if (!name || name.trim() === '') {
+      return res.status(400).json({ message: 'Category name is required.' });
+    }
+
+    // Check if the category already exists
+    const existingCategory = await FitnessCategory.findOne({ name: name.trim() });
+    if (existingCategory) {
+      return res.status(400).json({ message: 'Category with this name already exists.' });
+    }
+
+    // Create a new fitness category
+    const newCategory = new FitnessCategory({
+      name: name.trim(),
+    });
+
+    // Save the category to the database
+    await newCategory.save();
+
+    return res.status(201).json({
+      message: 'Fitness category added successfully.',
+      category: newCategory,
+    });
+  } catch (error) {
+    console.error('Error adding fitness category:', error);
+    return res.status(500).json({
+      message: 'Failed to add fitness category.',
+      error: error.message,
+    });
+  }
+};
+
+
+
+
 module.exports = {
   adminLogin,
   registerAdmin,
@@ -862,7 +991,6 @@ module.exports = {
   loadAddCompetition,
   addCompetition,
   editCompetition,
-  loadEditCompetition,
   deleteCompetition,
   loadTrekkingPage,
   loadAddTrekking,
@@ -878,6 +1006,8 @@ module.exports = {
   deleteProduct,
   getUsers,
   blockUser,
-  unblockUser
+  unblockUser,
+  addFitnessCategory,
+  addFitness
 
 };

@@ -4,6 +4,8 @@ const { generateOTP, sendOTP } = require("../helper/twiloOtp");
 const User = require('../models/UserModel');
 const { OAuth2Client } = require("google-auth-library");
 const Competition = require('../models/competitionsModel');
+const Trekking = require('../models/trekkingModel');
+const products = require('../models/productModel');
 const { generateResetToken, generateToken, validateResetToken } = require('../helper/jwtHelper');
 const { log } = require('node:console');
 
@@ -250,10 +252,28 @@ const resendOtp = async (req, res) => {
 
 
 
-
-const loadHomePage = (req, res) => {
+const loadHomePage = async (req, res) => {
   try {
-    res.status(200).json({ message: 'Welcome to the Home Page!' });
+    // Get logged-in user details from the request (assuming token is validated elsewhere)
+    const user = req.user;  // Assuming user is attached to the request after token verification
+
+    if (!user) {
+      return res.status(401).json({ error: 'User not logged in' });
+    }
+
+    // Fetch all products, sorted by creation date (latest first)
+    const allProducts = await products.find().sort({ createdAt: -1 });
+
+    // Fetch all competitions, sorted by creation date (latest first)
+    const allCompetitions = await competitions.find().sort({ createdAt: -1 });
+
+    // Send the response with products, competitions, and logged-in user details
+    res.status(200).json({
+      message: 'Welcome to the Home Page!',
+      user,
+      products: allProducts,
+      competitions: allCompetitions,
+    });
   } catch (error) {
     console.error('Error loading home page:', error);
     res.status(500).json({ error: 'An error occurred while loading the home page.' });
@@ -320,6 +340,46 @@ const loadCompetitionDetailsPage = async (req, res) => {
 
 
 
+const registerForCompetition = async (req, res) => {
+  try {
+    const { competitionId, name, email, phone } = req.body;
+    const user = req.user; // Logged-in user details
+
+    if (!competitionId || !name || !email || !phone) {
+      return res.status(400).json({ error: 'All fields are required.' });
+    }
+
+    // Find the competition
+    const competition = await Competition.findById(competitionId);
+    if (!competition || competition.status !== 'active') {
+      return res.status(404).json({ error: 'Competition not found or inactive.' });
+    }
+
+    // Check if the user is already registered for this competition
+    if (user.registeredCompetitions.some(item => item.competitionId.toString() === competitionId)) {
+      return res.status(400).json({ error: 'You are already registered for this competition.' });
+    }
+
+    // Save user registration details
+    user.registeredCompetitions.push({
+      competitionId,
+      registrationDate: new Date(),
+    });
+
+    await user.save();
+
+    // Return registration details and cost
+    return res.status(200).json({
+      message: 'Registration details saved successfully.',
+      competition,
+      user,
+    });
+  } catch (error) {
+    console.error('Error during competition registration:', error);
+    res.status(500).json({ error: 'An error occurred during registration.' });
+  }
+};
+
 
 
 
@@ -330,5 +390,6 @@ module.exports = {
   resendOtp,
   loadHomePage,
   loadCompetitionsPage,
-  loadCompetitionDetailsPage
+  loadCompetitionDetailsPage,
+  registerForCompetition 
 };

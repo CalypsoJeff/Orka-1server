@@ -13,7 +13,7 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 
 app.use(cors({
-  origin: "http://localhost:5174",  // Allow requests from your frontend
+  origin: "http://localhost:5173",  // Allow requests from your frontend
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],  // Allowed HTTP methods
   credentials: true,  // Allow cookies and session data to be sent
 }));

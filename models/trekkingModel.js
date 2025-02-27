@@ -10,7 +10,7 @@ const trekkingSchema = new mongoose.Schema({
     type: [String],
     required: true,
     trim: true,
-    enum: ['Adventure', 'Nature', 'Fitness', 'Exploration'], // Add more categories as needed
+    enum: ['Adventure', 'Nature', 'Fitness', 'Exploration','others'], // Add more categories as needed
     message: 'Category must be one of the predefined values.'
   },
   image: {

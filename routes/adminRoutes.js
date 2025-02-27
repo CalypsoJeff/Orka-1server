@@ -1,6 +1,23 @@
 const express = require("express");
 const router = express.Router();
 const adminController = require("../controllers/adminController");
+const multer = require("multer");
+
+const storage = multer.memoryStorage();
+
+
+const upload = multer({
+  storage: storage,
+  limits: { fileSize: 5 * 1024 * 1024 }, // Limit file size to 5MB
+}).single("image"); // ✅ Accept only one image
+
+const uploads = multer({
+  storage: storage,
+  limits: { fileSize: 20 * 1024 * 1024 }, // 20MB file limit
+}).fields([
+  { name: "images", maxCount: 5 },
+]);
+
 
 
 
@@ -13,17 +30,15 @@ router.post('/resend-otp', adminController.resendOTP);
 
 //for competitions 
 router.put('/competitions', adminController.loadCompetitionsPage);
-router.post('/add-Competitions', adminController.addCompetition);
-router.get('/edit-competition/:id', adminController.loadEditCompetition);
-router.put('/edit-competition/:id', adminController.editCompetition);
+router.post('/add-Competitions', uploads, adminController.addCompetition);
+router.put('/edit-competition/:id', uploads, adminController.editCompetition);
 router.delete('/delete-competition/:id', adminController.deleteCompetition);
 
 
 // Routes for Trekking
 router.get('/trekking', adminController.loadTrekkingPage);
-router.post('/add-trekking', adminController.addTrekking);
-router.get('/edit-trekking/:id', adminController.loadEditTrekking);
-router.put('/edit-trekking/:id', adminController.editTrekking);
+router.post('/add-trekking',upload, adminController.addTrekking);
+router.put('/edit-trekking/:id',upload, adminController.editTrekking);
 router.delete('/delete-trekking/:id', adminController.deleteTrekking);
 
 
@@ -42,4 +57,11 @@ router.delete('/delete-product/:id', adminController.deleteProduct);
 router.get('/userController',adminController.getUsers);
 router.patch('/user/block', adminController.blockUser);
 router.patch('/user/unblock', adminController.unblockUser);
+
+
+
+//for fitness
+router.post('/add-fitness',  adminController.addFitness);
+router.post('/add-fitness-category', adminController.addFitnessCategory);
+
 module.exports = router;

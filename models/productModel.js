@@ -1,5 +1,5 @@
 const mongoose = require('mongoose');
-const Category = require('./Category'); // Import the Category model
+const Category = require('../models/productCategory'); 
 
 // Define the Product Schema
 const productSchema = new mongoose.Schema(
@@ -25,7 +25,7 @@ const productSchema = new mongoose.Schema(
     },
     category: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'Category', // Reference to Category model
+      ref: 'Category', 
       required: true,
     },
     brand: {

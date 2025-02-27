@@ -68,7 +68,7 @@ const competitionSchema = new mongoose.Schema({
   type: {
     type: [String],
     required: true,
-    enum: ['Inter Corporates', 'Inter College', 'Intra College', 'State Level', 'National Level'], // Add more types as needed
+    enum: ['Inter Corporates', 'Inter College', 'Intra College', 'State Level', 'National Level','others'], // Add more types as needed
     validate: {
       validator: (arr) => arr.length > 0,
       message: 'At least one type must be selected.'
@@ -116,7 +116,7 @@ const competitionSchema = new mongoose.Schema({
   status: {
     type: String,
     enum: ['active', 'inactive'],
-    default: 'inactive',
+    default: 'active',
     message: 'Status must be either "active" or "inactive".'
   }
 }, { timestamps: true });
