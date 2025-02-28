@@ -628,7 +628,7 @@ const toggleProductCategoryStatus = async (req, res) => {
 const loadProductsPage = async (req, res) => {
   try {
     // Fetch all products from the database, sorted by creation date (newest first)
-    const Products = await products.find().sort({ createdAt: -1 });
+    const Products = await products.find().sort({ createdAt: -1 }).populate("category","name");
 
     if (!Products || Products.length === 0) {
       return res.status(200).json({
@@ -665,6 +665,8 @@ const loadAddProduct = (req, res) => {
   }
 };
 
+
+
 const addProduct = async (req, res) => {
   try {
     const {
@@ -672,49 +674,69 @@ const addProduct = async (req, res) => {
       description,
       price,
       discount,
-      category, // Category should be an ObjectId
+      category,
       brand,
-      sizes, // Sizes array with colors and stock quantities
+      sizes,
       material,
-      images,
       rating,
     } = req.body;
 
-    // Validate sizes and colors (optional, but can be added for better error handling)
-    if (!sizes || sizes.length === 0) {
-      return res.status(400).json({ message: 'Product must have at least one size.' });
+    console.log("🔥 Raw Request Body:", req.body);
+    console.log("🖼️ Received Images:", req.files);
+
+    // ✅ Parse sizes if it's sent as a string
+    let parsedSizes;
+    try {
+      parsedSizes = typeof sizes === "string" ? JSON.parse(sizes) : sizes;
+    } catch (error) {
+      return res.status(400).json({ message: "Invalid sizes format." });
     }
 
-    // Validate the category reference
+    // ✅ Validate category
     const categoryExists = await Category.findById(category);
     if (!categoryExists) {
-      return res.status(400).json({ message: 'Invalid category reference.' });
+      return res.status(400).json({ message: "Invalid category reference." });
     }
 
-    // Create and save the new product
+    // ✅ Upload images to S3 (Handling multiple images properly)
+    const files = req.files;
+    if (!files || files.length === 0) {
+      return res.status(400).json({ message: "At least one image is required" });
+    }
+
+    const uploadedImages = await Promise.all(
+      files.map(async (file) => {
+        const { Location } = await uploadToS3(file);
+        return Location;
+      })
+    );
+
+    console.log("🔥 Uploaded Image URLs:", uploadedImages);
+
+    // ✅ Create and save the new product
     const product = new Product({
       name,
       description,
       price,
-      discount: discount || 0, // Default to 0 if not provided
+      discount: discount || 0,
       category,
       brand,
-      sizes, // sizes array will contain sizes and colors with stock
+      sizes: parsedSizes, // ✅ Correctly saving parsed array
       material,
-      images,
-      rating: rating || 0, // Default to 0 if not provided
+      images: uploadedImages, // ✅ Store array of image URLs
+      rating: rating || 0,
     });
 
     await product.save();
 
     return res.status(200).json({
-      message: 'Product added successfully.',
+      message: "Product added successfully.",
       product,
     });
   } catch (error) {
-    console.error('Error adding product:', error);
+    console.error("❌ Error adding product:", error);
     return res.status(500).json({
-      message: 'Failed to add product.',
+      message: "Failed to add product.",
       error: error.message,
     });
   }
@@ -722,36 +744,12 @@ const addProduct = async (req, res) => {
 
 
 
-
-const loadEditProduct = async (req, res) => {
-  try {
-    const { id } = req.params;
-
-    // Fetch the product by ID
-    const product = await products.findById(id);
-
-    if (!product) {
-      return res.status(404).json({
-        message: 'Product not found.',
-      });
-    }
-
-    return res.status(200).json({
-      message: 'Product fetched successfully.',
-      product,
-    });
-  } catch (error) {
-    console.error('Error fetching product:', error);
-    return res.status(500).json({
-      message: 'Failed to fetch product.',
-      error: error.message,
-    });
-  }
-};
 
 const editProduct = async (req, res) => {
   try {
     const { id } = req.params;
+    console.log('req.body:', req.body);
+    console.log('sssss',id)
 
     const {
       name,
@@ -775,6 +773,15 @@ const editProduct = async (req, res) => {
       });
     }
 
+
+    // ✅ Parse sizes if it's sent as a string
+    let parsedSizes;
+    try {
+      parsedSizes = typeof sizes === "string" ? JSON.parse(sizes) : sizes;
+    } catch (error) {
+      return res.status(400).json({ message: "Invalid sizes format." });
+    }
+
     // Validate the category reference if it's provided
     if (category) {
       const categoryExists = await Category.findById(category);
@@ -793,7 +800,7 @@ const editProduct = async (req, res) => {
         discount: discount || existingProduct.discount,
         category: category || existingProduct.category,
         brand: brand || existingProduct.brand,
-        sizes: sizes || existingProduct.sizes, // Sizes will be updated as well
+        sizes: parsedSizes || existingProduct.sizes, // Sizes will be updated as well
         material: material || existingProduct.material,
         images: images || existingProduct.images,
         rating: rating || existingProduct.rating,
@@ -811,6 +818,42 @@ const editProduct = async (req, res) => {
       message: 'Failed to edit product.',
       error: error.message,
     });
+  }
+};
+
+
+
+
+// Controller to change the status of a product
+const changeProductStatus = async (req, res) => {
+  try {
+    const { productId } = req.params; // Get product ID from URL parameters
+    const { status } = req.body; // Get status ('active' or 'inactive') from request body
+
+    // Validate the status value
+    if (!['active', 'inactive'].includes(status)) {
+      return res.status(400).json({ message: 'Invalid status. Allowed values are "active" or "inactive".' });
+    }
+
+    // Find the product by ID and update its status
+    const updatedProduct = await products.findByIdAndUpdate(
+      productId,
+      { status },
+      { new: true, runValidators: true } // 'new' returns the updated document, 'runValidators' ensures validation runs during the update
+    );
+
+    if (!updatedProduct) {
+      return res.status(404).json({ message: 'Product not found.' });
+    }
+
+    // Return the updated product
+    res.status(200).json({
+      message: `Product status updated to ${status}`,
+      product: updatedProduct,
+    });
+  } catch (error) {
+    console.error('Error changing product status:', error);
+    res.status(500).json({ message: 'Failed to change product status', error: error.message });
   }
 };
 
@@ -960,7 +1003,7 @@ const unblockUser = async (req, res) => {
 
 
 
-const addFitness = async (req, res) => {
+const  addFitness = async (req, res) => {
   console.log("Entering add fitness");
 
   // Ensure video files are uploaded for each workout
@@ -1109,14 +1152,13 @@ module.exports = {
   deleteTrekking,
   addProductCategory,
   getAllProductCategories,
- deleteProductCategory,
  editProductCategory,
  toggleProductCategoryStatus ,
   loadProductsPage,
   loadAddProduct,
   addProduct,
-  loadEditProduct,
   editProduct,
+  changeProductStatus,
   deleteProduct,
   getUsers,
   blockUser,

@@ -36,7 +36,7 @@ const productSchema = new mongoose.Schema(
       {
         size: {
           type: String,
-          enum: ['S', 'M', 'L', 'XL', 'XXL', 'Custom'], // Example sizes
+          enum: ['S', 'M', 'L', 'XL', 'XXL', 'Custom'], 
           required: true,
         },
         colors: [
@@ -97,6 +97,11 @@ const productSchema = new mongoose.Schema(
     updatedAt: {
       type: Date,
       default: Date.now,
+    },
+    status: {
+      type: String,
+      enum: ['active', 'inactive'],
+      default: 'active',
     },
   },
   { timestamps: true }

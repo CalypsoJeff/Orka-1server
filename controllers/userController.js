@@ -12,6 +12,11 @@ const { log } = require('node:console');
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
 
+// const razorpayInstance = new Razorpay({
+//   key_id: process.env.RAZORPAY_KEY_ID,
+//   key_secret: process.env.RAZORPAY_KEY_SECRET,
+// });
+
 
 
 
@@ -385,7 +390,7 @@ const registerForCompetition = async (req, res) => {
 
 const showPaymentConfirmation = async (req, res) => {
   try {
-    const { competitionId } = req.params;  // Competition ID passed in params
+    const { competitionId } = req.params; 
     const competition = await Competition.findById(competitionId);
 
     if (!competition) {
@@ -401,6 +406,37 @@ const showPaymentConfirmation = async (req, res) => {
   } catch (error) {
     console.error('Error showing payment confirmation:', error);
     res.status(500).json({ error: 'An error occurred while showing payment confirmation.' });
+  }
+};
+
+
+
+
+const createRazorpayOrder = async (req, res) => {
+  try {
+    const { competitionId, amount } = req.body; // Passed amount from front-end (competition cost)
+
+    // Create Razorpay order
+    const options = {
+      amount: amount * 100, // amount in paise
+      currency: 'INR',
+      receipt: `order_rcptid_${new Date().getTime()}`,
+    };
+
+    razorpayInstance.orders.create(options, (err, order) => {
+      if (err) {
+        console.error('Error creating Razorpay order:', err);
+        return res.status(500).json({ error: 'Error creating Razorpay order.' });
+      }
+
+      return res.status(200).json({
+        message: 'Order created successfully.',
+        order,
+      });
+    });
+  } catch (error) {
+    console.error('Error creating Razorpay order:', error);
+    res.status(500).json({ error: 'An error occurred while creating Razorpay order.' });
   }
 };
 

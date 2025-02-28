@@ -14,9 +14,7 @@ const upload = multer({
 const uploads = multer({
   storage: storage,
   limits: { fileSize: 20 * 1024 * 1024 }, // 20MB file limit
-}).fields([
-  { name: "images", maxCount: 5 },
-]);
+}).array("images",5);
 
 
 
@@ -49,9 +47,9 @@ router.get('/add-product', adminController.loadAddProduct);
 router.post('/add-product-category', adminController.addProductCategory);
 router.get('/product-categories', adminController.getAllProductCategories);
 router.put('/edit-product-categories/:categoryId',  adminController.editProductCategory);
+router.put('/product/:productId/status',  adminController.changeProductStatus); 
 router.patch('/product-categories-toggle/:categoryId/status',  adminController.toggleProductCategoryStatus);
 router.post('/add-product', adminController.addProduct);
-router.get('/edit-product/:id', adminController.loadEditProduct);
 router.put('/edit-product/:id', adminController.editProduct);
 router.delete('/delete-product/:id', adminController.deleteProduct);
 
