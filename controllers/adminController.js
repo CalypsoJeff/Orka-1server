@@ -824,38 +824,43 @@ const editProduct = async (req, res) => {
 
 
 
-// Controller to change the status of a product
+
+
 const changeProductStatus = async (req, res) => {
+  console.log('🔥 Request Params:', req.params);
+
   try {
-    const { productId } = req.params; // Get product ID from URL parameters
-    const { status } = req.body; // Get status ('active' or 'inactive') from request body
+    const { productId } = req.params; // Extract product ID from URL parameters
 
-    // Validate the status value
-    if (!['active', 'inactive'].includes(status)) {
-      return res.status(400).json({ message: 'Invalid status. Allowed values are "active" or "inactive".' });
-    }
+    // Find the product by ID
+    const product = await products.findById(productId);
 
-    // Find the product by ID and update its status
-    const updatedProduct = await products.findByIdAndUpdate(
-      productId,
-      { status },
-      { new: true, runValidators: true } // 'new' returns the updated document, 'runValidators' ensures validation runs during the update
-    );
-
-    if (!updatedProduct) {
+    if (!product) {
       return res.status(404).json({ message: 'Product not found.' });
     }
 
-    // Return the updated product
+    // Reverse the current status (toggle between 'active' and 'inactive')
+    const newStatus = product.status === 'active' ? 'inactive' : 'active';
+
+    // Update the product with the new status
+    const updatedProduct = await products.findByIdAndUpdate(
+      productId,
+      { status: newStatus },
+      { new: true, runValidators: true } // Ensures the updated document is returned
+    );
+
+    // Send response with updated product details
     res.status(200).json({
-      message: `Product status updated to ${status}`,
+      message: `Product status changed to ${newStatus}`,
       product: updatedProduct,
     });
+
   } catch (error) {
-    console.error('Error changing product status:', error);
+    console.error('❌ Error changing product status:', error);
     res.status(500).json({ message: 'Failed to change product status', error: error.message });
   }
 };
+
 
 
 
