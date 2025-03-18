@@ -3,7 +3,7 @@ require('dotenv').config();
 const accountSid = process.env.TWILIO_ACCOUNT_SID; 
 const authToken = process.env.TWILIO_AUTH_TOKEN;  
 
-const twilioPhone = "+1 667 249 9018";  // Your Twilio phone number
+const twilioPhone = "+16672499018";  // Your Twilio phone number
 
 const client = twilio(accountSid, authToken);
 

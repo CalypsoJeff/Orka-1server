@@ -693,7 +693,7 @@ const addProduct = async (req, res) => {
     }
 
     // ✅ Validate category
-    const categoryExists = await Category.findById(category);
+    const categoryExists = await productsCategory.findById(category);
     if (!categoryExists) {
       return res.status(400).json({ message: "Invalid category reference." });
     }
@@ -714,7 +714,7 @@ const addProduct = async (req, res) => {
     console.log("🔥 Uploaded Image URLs:", uploadedImages);
 
     // ✅ Create and save the new product
-    const product = new Product({
+    const product = new products({
       name,
       description,
       price,
@@ -765,7 +765,7 @@ const editProduct = async (req, res) => {
     } = req.body;
 
     // Fetch the product to get existing details
-    const existingProduct = await Product.findById(id);
+    const existingProduct = await products.findById(id);
 
     if (!existingProduct) {
       return res.status(404).json({
@@ -791,7 +791,7 @@ const editProduct = async (req, res) => {
     }
 
     // Update the product with new data
-    const updatedProduct = await Product.findByIdAndUpdate(
+    const updatedProduct = await products.findByIdAndUpdate(
       id,
       {
         name: name || existingProduct.name,

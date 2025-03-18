@@ -31,11 +31,11 @@ const userSchema = new mongoose.Schema({
       message: 'Phone number must be a 10-digit number.'
     }
   },
-  // profilePicture: {
-  //   type: String, // URL of the profile picture
-  //   trim: true,
-  //   default: 'default-profile.png' // Default profile picture
-  // },
+  profilePicture: {
+    type: String, // URL of the profile picture
+    trim: true,
+    default: 'default-profile.png' // Default profile picture
+  },
   // dob: {
   //   type: Date,
   //   validate: {
@@ -44,33 +44,21 @@ const userSchema = new mongoose.Schema({
   //   }
   // },
 
-  // address: {
-  //   street: { type: String, trim: true },
-  //   city: { type: String, trim: true, required: true },
-  //   state: { type: String, trim: true, required: true },
-  //   country: { type: String, trim: true, required: true },
-  //   postalCode: {
-  //     type: String,
-  //     trim: true,
-  //     validate: {
-  //       validator: (value) => /^[0-9]{5,6}$/.test(value),
-  //       message: 'Postal code must be 5-6 digits.'
-  //     }
-  //   }
-  // },
-  // registeredFitnessPrograms: [
-  //   {
-  //     fitnessId: {
-  //       type: mongoose.Schema.Types.ObjectId,
-  //       ref: 'Fitness',
-       
-  //     },
-  //     registrationDate: {
-  //       type: Date,
-  //       default: Date.now
-  //     }
-  //   }
-  //],
+  address: {
+    street: { type: String, trim: true },
+    city: { type: String, trim: true, required: true },
+    state: { type: String, trim: true, required: true },
+    country: { type: String, trim: true, required: true },
+    postalCode: {
+      type: String,
+      trim: true,
+      validate: {
+        validator: (value) => /^[0-9]{5,6}$/.test(value),
+        message: 'Postal code must be 5-6 digits.'
+      }
+    }
+  },
+
   registeredCompetitions: [
     {
       competitionId: {
@@ -110,20 +98,22 @@ const userSchema = new mongoose.Schema({
       }
     }
   ],
-  // role: {
-  //   type: String,
-  //   enum: ['User', 'Admin'],
-  //   default: 'User'
-  // },
+
   status: {
     type: String,
     enum: ['Active', 'Inactive', 'Banned'],
     default: 'Active'
-  },
+  }, 
   createdAt: {
     type: Date,
     default: Date.now
-  }
+  },
+  orders: [  
+    {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'Order' // Assuming you have an 'Order' model
+    }
+  ]
 }, { timestamps: true });
 
 module.exports = mongoose.model('User', userSchema);
