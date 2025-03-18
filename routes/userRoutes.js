@@ -19,7 +19,7 @@ router.get('/user-details', userController.getUserDetails);
 
 
 router.get("/competitions", userController.loadCompetitionsPage);
-router.get("/competition-Details", userController.loadCompetitionDetailsPage );
+router.get("/competition-Details/:competitionId", userController.loadCompetitionDetailsPage );
 router.post('/registerForCompetition',  userController.registerForCompetition);
 router.get('/showPaymentConfirmation/:competitionId',  userController.showPaymentConfirmation);
 router.post('/create-order', userController.createRazorpayCompetition);

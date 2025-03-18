@@ -1,22 +1,34 @@
 import jwt from 'jsonwebtoken';
+import dotenv from 'dotenv';
 
-const SECRET_KEY = "YOUR_SECRET_KEY";
-const REFRESH_SECRET_KEY = "REFRESH_SECRET_KEY";
+dotenv.config();
+
+const SECRET_KEY = process.env.JWT_SECRET;
+const REFRESH_SECRET_KEY = process.env.JWT_REFRESH_SECRET;
+
+
 
 /**
  * Generates an access token and a refresh token.
- * @param {string} user - The username or user ID.
+ * @param {string} userId - The user's ID.
+ * @param {string} phone - The user's phone number.
  * @param {string} email - The user's email.
  * @param {string} role - The user's role.
  * @returns {Object} An object containing the access token and refresh token.
  */
-export const generateToken = (user, email, role) => {
-    const token = jwt.sign({ user, email, role }, SECRET_KEY, {
+export const generateToken = (userId, phone, role) => {
+    if (!SECRET_KEY || !REFRESH_SECRET_KEY) {
+        throw new Error("JWT secret keys are missing.");
+    }
+
+    const token = jwt.sign({ userId, phone, role }, SECRET_KEY, {
         expiresIn: '2h',
     });
-    const refreshToken = jwt.sign({ user, email, role }, REFRESH_SECRET_KEY, {
+
+    const refreshToken = jwt.sign({ userId, phone, role }, REFRESH_SECRET_KEY, {
         expiresIn: '5d',
     });
+
     return { token, refreshToken };
 };
 
@@ -26,8 +38,7 @@ export const generateToken = (user, email, role) => {
  * @returns {string} A reset token valid for 15 minutes.
  */
 export const generateResetToken = (email) => {
-    const resetToken = jwt.sign({ email }, SECRET_KEY, { expiresIn: '15m' }); // Short expiration
-    return resetToken;
+    return jwt.sign({ email }, SECRET_KEY, { expiresIn: '15m' });
 };
 
 /**
@@ -40,14 +51,24 @@ export const validateResetToken = (token, email) => {
     try {
         const decoded = jwt.verify(token, SECRET_KEY);
 
-        // Check if the token's email matches the user's email
         if (decoded.email !== email) {
             throw new Error("Token validation failed: Email mismatch");
         }
 
         return true; // Token is valid
     } catch (error) {
+        if (error.name === "TokenExpiredError") {
+            console.error("Token expired:", error);
+            return false;
+        }
+
         console.error("Token validation error:", error);
-        return false; // Token is invalid
+        return false;
     }
 };
+
+
+
+
+
+

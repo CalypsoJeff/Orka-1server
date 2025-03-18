@@ -31,47 +31,59 @@ const razorpayInstance = new Razorpay({
 
 
 
+
 const loginUser = async (req, res) => {
   try {
-    console.log("user login started");
+    console.log("User login started");
     const { phone, password } = req.body;
 
     // Validate input
     if (!phone || !password) {
-      return res.status(400).json({ error: "Phone and password are required." }); // Corrected error message
+      return res.status(400).json({ error: "Phone and password are required." });
     }
 
-    // Find the user by phone and select the password
-    const user = await User.findOne({ phone }).select('+password'); // Select password explicitly
+    // Find user by phone and select the password explicitly
+    const user = await User.findOne({ phone }).select('+password');
 
     if (!user) {
-      return res.status(400).json({ error: "User not found. Please register first." });
+      return res.status(401).json({ error: "User not found. Please register first." });
     }
 
     // Check if the user is banned
     if (user.status === 'Banned') {
-      return res.status(403).json({
-        message: 'Your account is banned. Please contact support.',
-      });
+      return res.status(403).json({ message: "Your account is banned. Please contact support." });
     }
 
-    // Compare the provided password with the stored hashed password
+    // Ensure user has a password before comparing
+    if (!user.password) {
+      return res.status(500).json({ error: "Password not found. Try resetting your password." });
+    }
+
+    // Compare hashed password
     const isPasswordMatch = await bcrypt.compare(password, user.password);
     if (!isPasswordMatch) {
-      return res.status(400).json({ error: "Invalid credentials. Please try again." });
+      return res.status(401).json({ error: "Invalid credentials. Please try again." });
     }
 
     // Generate JWT tokens
-    const { token, refreshToken } = generateToken(user.name, user.phone, "user");
-    console.log("user login done");
+    const { token, refreshToken } = generateToken(user._id, user.phone, "user");
 
-    // Send the response
+    console.log("User login successful");
+
+    // Convert Mongoose document to plain object
+    const userData = user.toObject();
+
+    // Remove password field
+    delete userData.password;
+
+    // Send response
     res.status(200).json({
       message: "Login successful!",
       token,
       refreshToken,
-      user,
+      user: userData,
     });
+
   } catch (error) {
     console.error("Error during login:", error);
     res.status(500).json({ error: "An error occurred during login. Please try again later." });
@@ -418,8 +430,8 @@ const loadCompetitionDetailsPage = async (req, res) => {
 
 const registerForCompetition = async (req, res) => {
   try {
-    const { competitionId, name, email, phone } = req.body;
-    const userId = req.user.userId; 
+    const { competitionId, name, email, phone,userId} = req.body;
+   
 
     if (!competitionId || !name || !email || !phone) {
       return res.status(400).json({ error: 'All fields are required.' });
@@ -500,44 +512,37 @@ console.log( registrationDetails);
 };
 
 
-
-
 const createRazorpayCompetition = async (req, res) => {
   try {
     const { competitionId } = req.body;
-    const registrationDetails = req.session.registrationDetails; // Get registration details
-    console.log( registrationDetails);
+    const registrationDetails = req.session.registrationDetails;
 
-
-  
+    if (!registrationDetails) {
+      return res.status(400).json({ error: 'Registration details not found in session.' });
+    }
 
     // Verify Competition ID
     const competition = await Competition.findById(competitionId);
     if (!competition) {
       return res.status(404).json({ error: 'Competition not found.' });
     }
-    const amount =competition.cost;
- 
-    // Create Razorpay order with registration details
+
+    const amount = competition.cost;
+
+    // Create Razorpay order **without metadata**
     const options = {
       amount: amount * 100, // amount in paise
       currency: 'INR',
-      receipt: `order_rcptid_${new Date().getTime()}`,
-      metadata: { // Include registration details in metadata
-        competitionId: competitionId,
-        userId: registrationDetails.userId, 
-        name: registrationDetails.name,
-        email: registrationDetails.email,
-        phone: registrationDetails.phone,
-      }
+      receipt: `order_rcptid_${new Date().getTime()}`
     };
 
-    razorpayInstance.orders.create(options, async(err, order) => {
+    razorpayInstance.orders.create(options, async (err, order) => {
       if (err) {
         console.error('Error creating Razorpay order:', err);
         return res.status(500).json({ error: 'Failed to create Razorpay order.' });
       }
-    
+
+      
       // Payment successful (this part is hypothetical, you'll need to handle actual payment verification)
       if (order.status === 'paid') { // Assuming 'paid' is the successful status
         try {
@@ -670,5 +675,5 @@ module.exports = {
   loadProductDetails,
   loadShopProducts,
   loadTrekking,
-  
+
 };
