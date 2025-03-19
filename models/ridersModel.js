@@ -78,6 +78,7 @@ const bikeRideSchema = new mongoose.Schema({
   registeredParticipants: {
     type: [
       {
+        userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
         name: { type: String, required: true, trim: true },
         email: { type: String, required: true, trim: true },
         phone: { type: String, required: true, trim: true },

@@ -60,6 +60,7 @@ const trekkingSchema = new mongoose.Schema({
     message: 'Maximum participants must be at least 1.'
   },
   registeredParticipants: {
+    userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
     type: Number,
     default: 0, // Defaults to 0 if no participants are registered
     min: 0, // Cannot be negative

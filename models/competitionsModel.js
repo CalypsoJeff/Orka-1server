@@ -90,15 +90,19 @@ const competitionSchema = new mongoose.Schema({
       message: 'Max registrations must be a positive number.'
     }
   },
+  
   registeredParticipants: {
     type: [
       {
+        userId: { type: mongoose.Schema.Types.ObjectId, ref: 'User', required: true },
         name: { type: String, required: true, trim: true },
         email: { type: String, required: true, trim: true },
         phone: { type: String, required: true, trim: true },
         registrationDate: { type: Date, default: Date.now }
       }
     ],
+  
+  
     validate: {
       validator: function (value) {
         return value.length <= this.maxRegistrations; // Ensure participants do not exceed max allowed

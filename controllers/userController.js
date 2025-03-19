@@ -1,5 +1,5 @@
-const bcrypt = require('bcrypt');
-const redis = require("../helper/redisClient").default;
+import bcrypt from 'bcrypt';
+import redis from "../helper/redisClient";
 const { generateOTP, sendOTP } = require("../helper/twiloOtp");
 const mongoose = require('mongoose');
 const User = require('../models/UserModel');
@@ -9,7 +9,7 @@ const Order = require('../models/orderSchema');
 const Trekking = require('../models/trekkingModel');
 const BikeRide = require('../models/ridersModel'); 
 const products = require('../models/productModel');
-const { generateResetToken, generateToken, validateResetToken } = require('../helper/jwtHelper');
+const { generateResetToken, generateToken, validateResetToken, verifyAndInvalidateRefreshToken } = require('../helper/jwtHelper');
 const { log } = require('node:console');
 const session = require('express-session');
 const Razorpay = require('razorpay');
@@ -87,6 +87,91 @@ const loginUser = async (req, res) => {
   } catch (error) {
     console.error("Error during login:", error);
     res.status(500).json({ error: "An error occurred during login. Please try again later." });
+  }
+};
+
+
+
+
+export const logoutUser = async (req, res) => {
+  try {
+    console.log("User logout started");
+
+    const { refreshToken } = req.body;
+    if (!refreshToken) {
+      return res.status(400).json({ error: "Refresh token is required." });
+    }
+
+    const isInvalidated = verifyAndInvalidateRefreshToken(refreshToken);
+    
+    if (!isInvalidated) {
+      return res.status(401).json({ error: "Invalid or expired refresh token." });
+    }
+
+    console.log("User logged out successfully");
+    res.status(200).json({ message: "Logout successful! Please clear tokens on the client side." });
+
+  } catch (error) {
+    console.error("Error during logout:", error);
+    res.status(500).json({ error: "An error occurred during logout. Please try again later." });
+  }
+};
+
+
+
+
+
+const loadUserProfile = async (req, res) => {
+  try {
+    console.log("Loading user profile...");
+
+    const { userId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(userId)) {
+      return res.status(400).json({ error: "Invalid User ID format." });
+    }
+
+    // Fetch user details excluding password
+    const user = await User.findById(userId).select("-password");
+
+    if (!user) {
+      return res.status(404).json({ error: "User not found." });
+    }
+
+    // Fetch competitions where user is a registered participant
+    const registeredCompetitions = await Competition.find({
+      "registeredParticipants.userId": userId,
+    }).select("name date location");
+
+    // Fetch trekking events where user is a registered participant
+    const registeredTrekkingEvents = await Trekking.find({
+      "registeredParticipants.userId": userId,
+    }).select("name date location");
+
+    // Fetch bike rides where user is a registered participant
+    const registeredBikeRides = await BikeRide.find({
+      "registeredParticipants.userId": userId,
+    }).select("name date location");
+
+    // Fetch orders where user is associated
+    const orders = await Order.find({
+      "user.userId": userId,
+    }).select("totalAmount status createdAt");
+
+    console.log("User profile loaded successfully");
+
+    res.status(200).json({
+      user,
+      registeredCompetitions,
+      registeredTrekkingEvents,
+      registeredBikeRides,
+      orders,
+    });
+  } catch (error) {
+    console.error("Error loading user profile:", error);
+    res.status(500).json({
+      error: "An error occurred while fetching the profile.",
+    });
   }
 };
 
@@ -310,67 +395,6 @@ const loadHomePage = async (req, res) => {
 
 
 
-const getUserDetails = async (req, res) => {
-  try {
-    // const userId = "67c07e6957b6f7fe5e48d918"; 
- 
-    const userId = new mongoose.Types.ObjectId("67c07e6957b6f7fe5e48d918");
-
-    if (!userId) {
-      return res.status(401).json({ error: 'Unauthorized: User ID not found.' });
-    }
-
-    // Find the user without populating initially
-    const user = await User.findById(userId);
-    console.log(user,"ith antha ");
-    
-
-    if (!user) {
-      return res.status(404).json({ error: 'User not found.' });
-    }
-
-    // Populate only if the user has related data
-    if (user.orders && user.orders.length > 0) {
-      await user.populate('orders');
-    }
-
-    if (user.registeredCompetitions && user.registeredCompetitions.length > 0) {
-      await user.populate('registeredCompetitions.competitionId');
-    }
-
-    if (user.registeredTrekkingEvents && user.registeredTrekkingEvents.length > 0) {
-      await user.populate('registeredTrekkingEvents.trekkingId');
-    }
-
-    if (user.registeredBikeRides && user.registeredBikeRides.length > 0) {
-      await user.populate('registeredBikeRides.rideId');
-    }
-
-    // Send the user details in the response
-    res.status(200).json({
-      message: 'User details retrieved successfully.',
-      user: {
-        _id: user._id,
-        name: user.name,
-        email: user.email,
-        phone: user.phone,
-        profilePicture: user.profilePicture,
-        address: user.address,
-        orders: user.orders || [], // Ensure orders is always an array
-        registeredCompetitions: user.registeredCompetitions || [],
-        registeredTrekkingEvents: user.registeredTrekkingEvents || [],
-        registeredBikeRides: user.registeredBikeRides || [],
-        status: user.status,
-        createdAt: user.createdAt,
-      },
-    });
-  } catch (error) {
-    console.error('Error retrieving user details:', error);
-    res.status(500).json({ error: 'Internal server error.' });
-  }
-};
-
-
 
 
 const loadCompetitionsPage = async (req, res) => {
@@ -485,6 +509,7 @@ const registerForCompetition = async (req, res) => {
 const showPaymentConfirmation = async (req, res) => {
   try {
     const { competitionId } = req.params;
+    const { userId} = req.body;
     const registrationDetails = req.session.registrationDetails;
 console.log( registrationDetails);
 
@@ -503,7 +528,8 @@ console.log( registrationDetails);
       message: 'Payment confirmation details.',
       competition,
       cost: competition.cost,
-      registrationDetails // Include registration details from session
+      registrationDetails,
+      userId
     });
   } catch (error) {
     console.error('Error showing payment confirmation:', error);
@@ -542,7 +568,7 @@ const createRazorpayCompetition = async (req, res) => {
         return res.status(500).json({ error: 'Failed to create Razorpay order.' });
       }
 
-      
+
       // Payment successful (this part is hypothetical, you'll need to handle actual payment verification)
       if (order.status === 'paid') { // Assuming 'paid' is the successful status
         try {
@@ -592,6 +618,8 @@ const createRazorpayCompetition = async (req, res) => {
     return res.status(500).json({ error: 'Internal server error.' });
   }
 };
+
+
 
 
 
@@ -661,11 +689,12 @@ const loadTrekking = async (req, res) => {
 
 module.exports = {
   loginUser ,
+  logoutUser,
   registerUser,
   verifyOtpAndRegister,
   resendOtp,
   loadHomePage,
-  getUserDetails,
+  loadUserProfile,
   loadCompetitionsPage,
   loadCompetitionDetailsPage,
   registerForCompetition ,

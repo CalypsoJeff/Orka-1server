@@ -59,45 +59,6 @@ const userSchema = new mongoose.Schema({
     }
   },
 
-  registeredCompetitions: [
-    {
-      competitionId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Competition',
-     
-      },
-      registrationDate: {
-        type: Date,
-        default: Date.now
-      }
-    }
-  ],
-  registeredTrekkingEvents: [
-    {
-      trekkingId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Trekking',
-   
-      },
-      registrationDate: {
-        type: Date,
-        default: Date.now
-      }
-    }
-  ],
-  registeredBikeRides: [
-    {
-      rideId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'BikeRide',
-      
-      },
-      registrationDate: {
-        type: Date,
-        default: Date.now
-      }
-    }
-  ],
 
   status: {
     type: String,

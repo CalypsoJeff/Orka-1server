@@ -9,10 +9,11 @@ const userController = require("../controllers/userController");
 
 
 router.post("/login", userController.loginUser);
+router.post('/logout', userController.logoutUser);
 router.post("/register", userController.registerUser);
 router.post("/verify-otp", userController.verifyOtpAndRegister);
 router.post("/resend-otp", userController.resendOtp);
-router.get('/user-details', userController.getUserDetails);
+router.get('/profile/:userId',  userController.loadUserProfile);
 
 
 
