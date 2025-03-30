@@ -1,5 +1,5 @@
-import bcrypt from 'bcrypt';
-import redis from "../helper/redisClient";
+const bcrypt= require ('bcrypt');
+const  redis =require ("../helper/redisClient");
 const { generateOTP, sendOTP } = require("../helper/twiloOtp");
 const mongoose = require('mongoose');
 const User = require('../models/UserModel');
@@ -93,7 +93,7 @@ const loginUser = async (req, res) => {
 
 
 
-export const logoutUser = async (req, res) => {
+const logoutUser = async (req, res) => {
   try {
     console.log("User logout started");
 
